@@ -3,6 +3,7 @@ module BinaryParser
   BinaryParser,
   run,
   failure,
+  byte,
   bytesOfSize,
   unitOfSize,
   unitOfBytes,
@@ -43,6 +44,16 @@ run (BinaryParser parser) input =
 failure :: Text -> BinaryParser a
 failure text =
   BinaryParser (lift (Success.failure text))
+
+-- |
+-- Consume a single byte.
+{-# INLINE byte #-}
+byte :: BinaryParser Word8
+byte =
+  BinaryParser $ StateT $ \remainders ->
+    if ByteString.null remainders
+      then Success.failure "End of input"
+      else pure (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
 
 -- |
 -- Consume an amount of bytes.
