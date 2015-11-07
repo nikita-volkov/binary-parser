@@ -15,7 +15,7 @@ where
 import BinaryParser.Prelude
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
-import qualified Success
+import qualified Success.Pure as Success
 
 
 -- |
