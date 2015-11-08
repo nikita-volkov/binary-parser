@@ -9,7 +9,7 @@ module BinaryParser
   unitOfBytes,
   remainders,
   endOfInput,
-  limited,
+  sized,
 )
 where
 
@@ -102,11 +102,10 @@ endOfInput =
     _ -> Success.failure "Not the end of input"
 
 -- |
--- Run a subparser on an input from the current parser,
--- limited to the specified amount of bytes.
-{-# INLINE limited #-}
-limited :: Int -> BinaryParser a -> BinaryParser a
-limited size (BinaryParser stateT) =
+-- Run a subparser passing it a chunk of the current input of the specified size.
+{-# INLINE sized #-}
+sized :: Int -> BinaryParser a -> BinaryParser a
+sized size (BinaryParser stateT) =
   BinaryParser $ StateT $ \remainders ->
     if ByteString.length remainders >= size
       then 
