@@ -1,10 +1,6 @@
 module BinaryParser.Prelude
 ( 
   module Exports,
-  LazyByteString,
-  ByteStringBuilder,
-  LazyText,
-  TextBuilder,
   mapLeft,
   joinMap,
 )
@@ -29,26 +25,6 @@ import Data.ByteString as Exports (ByteString)
 -------------------------
 import Data.Text as Exports (Text)
 
--- custom
--------------------------
-import qualified Data.ByteString.Lazy
-import qualified Data.ByteString.Builder
-import qualified Data.Text.Lazy
-import qualified Data.Text.Lazy.Builder
-
-
-type LazyByteString =
-  Data.ByteString.Lazy.ByteString
-
-type ByteStringBuilder =
-  Data.ByteString.Builder.Builder
-
-type LazyText =
-  Data.Text.Lazy.Text
-
-type TextBuilder =
-  Data.Text.Lazy.Builder.Builder
-
 
 {-# INLINE mapLeft #-}
 mapLeft :: (a -> b) -> Either a x -> Either b x
@@ -57,4 +33,4 @@ mapLeft f =
 
 joinMap :: Monad m => (a -> m b) -> m a -> m b
 joinMap f =
-  join . fmap f
+  join . liftM f
