@@ -5,10 +5,14 @@ module BinaryParser
   run,
   failure,
   byte,
+  matchingByte,
   bytesOfSize,
+  bytesWhile,
   unitOfSize,
   unitOfBytes,
+  unitWhile,
   remainders,
+  fold,
   endOfInput,
   sized,
   -- * Extras
@@ -19,14 +23,16 @@ module BinaryParser
   leWord32,
   beWord64,
   leWord64,
+  asciiIntegral,
 )
 where
 
-import BinaryParser.Prelude
+import BinaryParser.Prelude hiding (fold)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
 import qualified Success.Pure as Success
 import qualified Data.ByteString.Internal as A
+import qualified BinaryParser.Prelude as B
 
 
 -- |
@@ -46,7 +52,7 @@ newtype BinaryParser a =
 {-# INLINE run #-}
 run :: BinaryParser a -> ByteString -> Either Text a
 run (BinaryParser parser) input =
-  mapLeft fold (Success.asEither (evalStateT parser input))
+  mapLeft B.fold (Success.asEither (evalStateT parser input))
 
 -- |
 -- Fail with a message.
@@ -66,6 +72,32 @@ byte =
       else pure (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
 
 -- |
+-- Consume a single byte, which satisfies the predicate.
+{-# INLINE satisfyingByte #-}
+satisfyingByte :: (Word8 -> Bool) -> BinaryParser Word8
+satisfyingByte predicate =
+  BinaryParser $ StateT $ \remainders ->
+    case ByteString.uncons remainders of
+      Nothing -> Success.failure "End of input"
+      Just (head, tail) ->
+        if predicate head
+          then pure (head, tail)
+          else Success.failure "Byte doesn't satisfy a predicate"
+
+-- |
+-- Consume a single byte, which satisfies the predicate.
+{-# INLINE matchingByte #-}
+matchingByte :: (Word8 -> Either Text a) -> BinaryParser a
+matchingByte matcher =
+  BinaryParser $ StateT $ \remainders ->
+    case ByteString.uncons remainders of
+      Nothing -> Success.failure "End of input"
+      Just (head, tail) ->
+        case matcher head of
+          Right result -> pure (result, tail)
+          Left error -> Success.failure error
+
+-- |
 -- Consume an amount of bytes.
 {-# INLINE bytesOfSize #-}
 bytesOfSize :: Int -> BinaryParser ByteString
@@ -74,6 +106,14 @@ bytesOfSize size =
     if ByteString.length remainders >= size
       then return (ByteString.unsafeTake size remainders, ByteString.unsafeDrop size remainders)
       else Success.failure "End of input"
+
+-- |
+-- Consume multiple bytes, which satisfy the predicate.
+{-# INLINE bytesWhile #-}
+bytesWhile :: (Word8 -> Bool) -> BinaryParser ByteString
+bytesWhile predicate =
+  BinaryParser $ StateT $ \remainders ->
+    pure (ByteString.span predicate remainders)
 
 -- |
 -- Skip an amount of bytes.
@@ -96,6 +136,14 @@ unitOfBytes bytes =
       else Success.failure "Bytes don't match"
 
 -- |
+-- Skip bytes, which satisfy the predicate.
+{-# INLINE unitWhile #-}
+unitWhile :: (Word8 -> Bool) -> BinaryParser ()
+unitWhile predicate =
+  BinaryParser $ StateT $ \remainders ->
+    pure ((), ByteString.dropWhile predicate remainders)
+
+-- |
 -- Consume all the remaining bytes.
 {-# INLINE remainders #-}
 remainders :: BinaryParser ByteString
@@ -110,6 +158,23 @@ endOfInput =
   BinaryParser $ StateT $ \case
     "" -> return ((), ByteString.empty)
     _ -> Success.failure "Not the end of input"
+
+-- |
+-- Left-fold the bytes, terminating before the byte,
+-- on which the step function returns Nothing.
+{-# INLINE fold #-}
+fold :: (a -> Word8 -> Maybe a) -> a -> BinaryParser a
+fold step init =
+  BinaryParser $ StateT $ return . loop init
+  where
+    loop !accumulator remainders =
+      case ByteString.uncons remainders of
+        Nothing -> (accumulator, remainders)
+        Just (head, tail) ->
+          case step accumulator head of
+            Just newAccumulator ->
+              loop newAccumulator tail
+            Nothing -> (accumulator, remainders)
 
 -- |
 -- Run a subparser passing it a chunk of the current input of the specified size.
@@ -200,3 +265,23 @@ leWord64 =
 leWord64 =
   storableOfSize 8
 #endif
+
+-- |
+-- Integral number encoded in ASCII.
+{-# INLINE asciiIntegral #-}
+asciiIntegral :: Integral a => BinaryParser a
+asciiIntegral = 
+  do
+    firstDigit <- matchingByte byteDigit
+    fold step firstDigit
+  where
+    byteDigit byte =
+      case byte - 48 of
+        subtracted ->
+          if subtracted <= 9
+            then Right (fromIntegral subtracted)
+            else Left "Not an ASCII decimal byte"
+    step state byte =
+      case byteDigit byte of
+        Right digit -> Just (state * 10 + digit)
+        _ -> Nothing
