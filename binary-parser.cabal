@@ -7,9 +7,9 @@ synopsis:
 category:
   Parser, Binary
 homepage:
-  https://github.com/nikita-volkov/binary-parser 
+  https://github.com/nikita-volkov/binary-parser
 bug-reports:
-  https://github.com/nikita-volkov/binary-parser/issues 
+  https://github.com/nikita-volkov/binary-parser/issues
 author:
   Nikita Volkov <nikita.y.volkov@mail.ru>
 maintainer:
@@ -25,13 +25,11 @@ build-type:
 cabal-version:
   >=1.10
 
-
 source-repository head
   type:
     git
   location:
     git://github.com/nikita-volkov/binary-parser.git
-
 
 library
   hs-source-dirs:
