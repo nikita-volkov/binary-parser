@@ -194,8 +194,10 @@ storableOfSize :: Storable a => Int -> BinaryParser a
 storableOfSize size =
   BinaryParser $ StateT $ \(A.PS payloadFP offset length) ->
     if length >= size
-      then let result = unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peek (castPtr ptr)
-               newRemainder = A.PS payloadFP (offset + size) (length - size)
+      then let result =
+                 unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peekByteOff (castPtr ptr) offset
+               newRemainder =
+                 A.PS payloadFP (offset + size) (length - size)
                in return (result, newRemainder)
       else throwE "End of input" 
 
