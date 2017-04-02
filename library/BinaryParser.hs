@@ -30,7 +30,6 @@ where
 import BinaryParser.Prelude hiding (fold)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
-import qualified Success.Pure as Success
 import qualified Data.ByteString.Internal as A
 import qualified BinaryParser.Prelude as B
 
@@ -44,22 +43,22 @@ import qualified BinaryParser.Prelude as B
 -- Does not generate fancy error-messages,
 -- which contributes to its efficiency.
 newtype BinaryParser a =
-  BinaryParser ( StateT ByteString ( Success.Success Text ) a )
-  deriving ( Functor , Applicative , Alternative , Monad , MonadPlus )
+  BinaryParser ( StateT ByteString ( Except Text ) a )
+  deriving ( Functor , Applicative , Alternative , Monad , MonadPlus , MonadError Text )
 
 -- |
 -- Apply a parser to bytes.
 {-# INLINE run #-}
 run :: BinaryParser a -> ByteString -> Either Text a
 run (BinaryParser parser) input =
-  mapLeft B.fold (Success.asEither (evalStateT parser input))
+  runExcept (evalStateT parser input)
 
 -- |
 -- Fail with a message.
 {-# INLINE failure #-}
 failure :: Text -> BinaryParser a
 failure text =
-  BinaryParser (lift (Success.failure text))
+  BinaryParser (lift (throwE text))
 
 -- |
 -- Consume a single byte.
@@ -68,7 +67,7 @@ byte :: BinaryParser Word8
 byte =
   BinaryParser $ StateT $ \remainders ->
     if ByteString.null remainders
-      then Success.failure "End of input"
+      then throwE "End of input"
       else pure (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
 
 -- |
@@ -78,11 +77,11 @@ satisfyingByte :: (Word8 -> Bool) -> BinaryParser Word8
 satisfyingByte predicate =
   BinaryParser $ StateT $ \remainders ->
     case ByteString.uncons remainders of
-      Nothing -> Success.failure "End of input"
+      Nothing -> throwE "End of input"
       Just (head, tail) ->
         if predicate head
           then pure (head, tail)
-          else Success.failure "Byte doesn't satisfy a predicate"
+          else throwE "Byte doesn't satisfy a predicate"
 
 -- |
 -- Consume a single byte, which satisfies the predicate.
@@ -91,11 +90,11 @@ matchingByte :: (Word8 -> Either Text a) -> BinaryParser a
 matchingByte matcher =
   BinaryParser $ StateT $ \remainders ->
     case ByteString.uncons remainders of
-      Nothing -> Success.failure "End of input"
+      Nothing -> throwE "End of input"
       Just (head, tail) ->
         case matcher head of
           Right result -> pure (result, tail)
-          Left error -> Success.failure error
+          Left error -> throwE error
 
 -- |
 -- Consume an amount of bytes.
@@ -105,7 +104,7 @@ bytesOfSize size =
   BinaryParser $ StateT $ \remainders ->
     if ByteString.length remainders >= size
       then return (ByteString.unsafeTake size remainders, ByteString.unsafeDrop size remainders)
-      else Success.failure "End of input"
+      else throwE "End of input"
 
 -- |
 -- Consume multiple bytes, which satisfy the predicate.
@@ -123,7 +122,7 @@ unitOfSize size =
   BinaryParser $ StateT $ \remainders ->
     if ByteString.length remainders >= size
       then return ((), ByteString.unsafeDrop size remainders)
-      else Success.failure "End of input"
+      else throwE "End of input"
 
 -- |
 -- Skip specific bytes, while failing if they don't match.
@@ -133,7 +132,7 @@ unitOfBytes bytes =
   BinaryParser $ StateT $ \remainders ->
     if ByteString.isPrefixOf bytes remainders
       then return ((), ByteString.unsafeDrop (ByteString.length bytes) remainders)
-      else Success.failure "Bytes don't match"
+      else throwE "Bytes don't match"
 
 -- |
 -- Skip bytes, which satisfy the predicate.
@@ -157,7 +156,7 @@ endOfInput :: BinaryParser ()
 endOfInput =
   BinaryParser $ StateT $ \case
     "" -> return ((), ByteString.empty)
-    _ -> Success.failure "Not the end of input"
+    _ -> throwE "Not the end of input"
 
 -- |
 -- Left-fold the bytes, terminating before the byte,
@@ -186,7 +185,7 @@ sized size (BinaryParser stateT) =
       then 
         evalStateT stateT (ByteString.unsafeTake size remainders) &
         fmap (\result -> (result, ByteString.unsafeDrop size remainders))
-      else Success.failure "End of input"
+      else throwE "End of input"
 
 -- |
 -- Storable value of the given amount of bytes.
@@ -198,7 +197,7 @@ storableOfSize size =
       then let result = unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peek (castPtr ptr)
                newRemainder = A.PS payloadFP (offset + size) (length - size)
                in return (result, newRemainder)
-      else Success.failure "End of input" 
+      else throwE "End of input" 
 
 -- | Big-endian word of 2 bytes.
 {-# INLINE beWord16 #-}
