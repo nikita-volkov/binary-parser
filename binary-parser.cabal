@@ -50,7 +50,7 @@ library
     mtl == 2.*,
     transformers >= 0.4 && < 0.6,
     base-prelude < 2,
-    base >= 4.7 && < 5
+    base >= 4.9.1.0 && < 5
 
 test-suite tests
   type:
