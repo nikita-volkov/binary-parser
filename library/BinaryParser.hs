@@ -32,19 +32,7 @@ import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.ByteString.Internal as A
 import qualified BinaryParser.Prelude as B
-
-
--- |
--- A highly-efficient parser specialised for strict 'ByteString's.
--- 
--- Supports the roll-back and alternative branching
--- on the basis of the 'Alternative' interface.
--- 
--- Does not generate fancy error-messages,
--- which contributes to its efficiency.
-newtype BinaryParser a =
-  BinaryParser ( StateT ByteString ( Except Text ) a )
-  deriving ( Functor , Applicative , Alternative , Monad , MonadPlus , MonadError Text )
+import BinaryParser.Internal(BinaryParser(..))
 
 -- |
 -- Apply a parser to bytes.
