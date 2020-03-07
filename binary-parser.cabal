@@ -1,7 +1,7 @@
 name:
   binary-parser
 version:
-  0.5.5
+  0.5.6
 synopsis:
   A highly-efficient but limited parser API specialised for bytestrings
 category:

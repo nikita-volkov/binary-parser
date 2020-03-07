@@ -9,7 +9,7 @@ import qualified Data.ByteString as A
 import qualified Data.ByteString.Builder as C
 import qualified Data.ByteString.Lazy as D
 import qualified BinaryParser as B
-import BinaryParser.Internal
+import BinaryParser.Internal(BinaryParser(..))
 
 main =
   defaultMain $
@@ -38,7 +38,7 @@ main =
 newtype MyWord16 = MyWord16 Word16
   deriving (Eq,Show)
 
-coercionTest = testCase "coercionTest" $ 
+coercionTest = testCase "coercionTest" $
   assertEqual "MyWord16" (MyWord16 <$> B.run B.beWord16 "\NUL\SOH") (B.run (coerce B.beWord16) "\NUL\SOH")
 
 builderIsomporhismProperty details parser valueToBuilder =
