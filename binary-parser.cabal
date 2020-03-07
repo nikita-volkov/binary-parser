@@ -42,6 +42,7 @@ library
     BinaryParser.Prelude
   exposed-modules:
     BinaryParser
+    BinaryParser.Internal
   build-depends:
     -- data:
     bytestring >= 0.10 && < 0.11,
