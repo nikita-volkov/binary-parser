@@ -46,6 +46,9 @@ newtype BinaryParser a =
   BinaryParser ( StateT ByteString ( Except Text ) a )
   deriving ( Functor , Applicative , Alternative , Monad , MonadPlus , MonadError Text )
 
+instance MonadFail BinaryParser where
+  fail = failure . fromString
+
 -- |
 -- Apply a parser to bytes.
 {-# INLINE run #-}
