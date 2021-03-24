@@ -43,8 +43,11 @@ import qualified BinaryParser.Prelude as B
 -- Does not generate fancy error-messages,
 -- which contributes to its efficiency.
 newtype BinaryParser a =
-  BinaryParser ( StateT ByteString ( Except Text ) a )
+  BinaryParser ( ByteString -> Either Text ( a , ByteString ) )
   deriving ( Functor , Applicative , Alternative , Monad , MonadPlus , MonadError Text )
+    via ( StateT ByteString ( Except Text ) )
+
+type role BinaryParser representational
 
 instance MonadFail BinaryParser where
   fail = failure . fromString
@@ -54,112 +57,112 @@ instance MonadFail BinaryParser where
 {-# INLINE run #-}
 run :: BinaryParser a -> ByteString -> Either Text a
 run (BinaryParser parser) input =
-  runExcept (evalStateT parser input)
+  fmap fst $ parser input
 
 -- |
 -- Fail with a message.
 {-# INLINE failure #-}
 failure :: Text -> BinaryParser a
 failure text =
-  BinaryParser (lift (throwE text))
+  BinaryParser (const (Left text))
 
 -- |
 -- Consume a single byte.
 {-# INLINE byte #-}
 byte :: BinaryParser Word8
 byte =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     if ByteString.null remainders
-      then throwE "End of input"
-      else pure (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
+      then Left "End of input"
+      else Right (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
 
 -- |
 -- Consume a single byte, which satisfies the predicate.
 {-# INLINE satisfyingByte #-}
 satisfyingByte :: (Word8 -> Bool) -> BinaryParser Word8
 satisfyingByte predicate =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     case ByteString.uncons remainders of
-      Nothing -> throwE "End of input"
+      Nothing -> Left "End of input"
       Just (head, tail) ->
         if predicate head
-          then pure (head, tail)
-          else throwE "Byte doesn't satisfy a predicate"
+          then Right (head, tail)
+          else Left "Byte doesn't satisfy a predicate"
 
 -- |
 -- Consume a single byte, which satisfies the predicate.
 {-# INLINE matchingByte #-}
 matchingByte :: (Word8 -> Either Text a) -> BinaryParser a
 matchingByte matcher =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     case ByteString.uncons remainders of
-      Nothing -> throwE "End of input"
+      Nothing -> Left "End of input"
       Just (head, tail) ->
         case matcher head of
-          Right result -> pure (result, tail)
-          Left error -> throwE error
+          Right result -> Right (result, tail)
+          Left error -> Left error
 
 -- |
 -- Consume an amount of bytes.
 {-# INLINE bytesOfSize #-}
 bytesOfSize :: Int -> BinaryParser ByteString
 bytesOfSize size =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     if ByteString.length remainders >= size
-      then return (ByteString.unsafeTake size remainders, ByteString.unsafeDrop size remainders)
-      else throwE "End of input"
+      then Right (ByteString.unsafeTake size remainders, ByteString.unsafeDrop size remainders)
+      else Left "End of input"
 
 -- |
 -- Consume multiple bytes, which satisfy the predicate.
 {-# INLINE bytesWhile #-}
 bytesWhile :: (Word8 -> Bool) -> BinaryParser ByteString
 bytesWhile predicate =
-  BinaryParser $ StateT $ \remainders ->
-    pure (ByteString.span predicate remainders)
+  BinaryParser $ \remainders ->
+    Right (ByteString.span predicate remainders)
 
 -- |
 -- Skip an amount of bytes.
 {-# INLINE unitOfSize #-}
 unitOfSize :: Int -> BinaryParser ()
 unitOfSize size =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     if ByteString.length remainders >= size
-      then return ((), ByteString.unsafeDrop size remainders)
-      else throwE "End of input"
+      then Right ((), ByteString.unsafeDrop size remainders)
+      else Left "End of input"
 
 -- |
 -- Skip specific bytes, while failing if they don't match.
 {-# INLINE unitOfBytes #-}
 unitOfBytes :: ByteString -> BinaryParser ()
 unitOfBytes bytes =
-  BinaryParser $ StateT $ \remainders ->
+  BinaryParser $ \remainders ->
     if ByteString.isPrefixOf bytes remainders
-      then return ((), ByteString.unsafeDrop (ByteString.length bytes) remainders)
-      else throwE "Bytes don't match"
+      then Right ((), ByteString.unsafeDrop (ByteString.length bytes) remainders)
+      else Left "Bytes don't match"
 
 -- |
 -- Skip bytes, which satisfy the predicate.
 {-# INLINE unitWhile #-}
 unitWhile :: (Word8 -> Bool) -> BinaryParser ()
 unitWhile predicate =
-  BinaryParser $ StateT $ \remainders ->
-    pure ((), ByteString.dropWhile predicate remainders)
+  BinaryParser $ \remainders ->
+    Right ((), ByteString.dropWhile predicate remainders)
 
 -- |
 -- Consume all the remaining bytes.
 {-# INLINE remainders #-}
 remainders :: BinaryParser ByteString
 remainders =
-  BinaryParser $ StateT $ \remainders -> return (remainders, ByteString.empty)
+  BinaryParser $ \remainders -> Right (remainders, ByteString.empty)
 
 -- |
 -- Fail if the input hasn't ended.
 {-# INLINE endOfInput #-}
 endOfInput :: BinaryParser ()
 endOfInput =
-  BinaryParser $ StateT $ \case
-    "" -> return ((), ByteString.empty)
-    _ -> throwE "Not the end of input"
+  BinaryParser $ \case
+    "" -> Right ((), ByteString.empty)
+    _ -> Left "Not the end of input"
 
 -- |
 -- Left-fold the bytes, terminating before the byte,
@@ -167,7 +170,7 @@ endOfInput =
 {-# INLINE fold #-}
 fold :: (a -> Word8 -> Maybe a) -> a -> BinaryParser a
 fold step init =
-  BinaryParser $ StateT $ return . loop init
+  BinaryParser $ Right . loop init
   where
     loop !accumulator remainders =
       case ByteString.uncons remainders of
@@ -182,27 +185,27 @@ fold step init =
 -- Run a subparser passing it a chunk of the current input of the specified size.
 {-# INLINE sized #-}
 sized :: Int -> BinaryParser a -> BinaryParser a
-sized size (BinaryParser stateT) =
-  BinaryParser $ StateT $ \remainders ->
+sized size (BinaryParser parser) =
+  BinaryParser $ \remainders ->
     if ByteString.length remainders >= size
-      then 
-        evalStateT stateT (ByteString.unsafeTake size remainders) &
-        fmap (\result -> (result, ByteString.unsafeDrop size remainders))
-      else throwE "End of input"
+      then
+        parser (ByteString.unsafeTake size remainders) &
+        fmap (\result -> (fst result, ByteString.unsafeDrop size remainders))
+      else Left "End of input"
 
 -- |
 -- Storable value of the given amount of bytes.
 {-# INLINE storableOfSize #-}
 storableOfSize :: Storable a => Int -> BinaryParser a
 storableOfSize size =
-  BinaryParser $ StateT $ \(A.PS payloadFP offset length) ->
+  BinaryParser $ \(A.PS payloadFP offset length) ->
     if length >= size
       then let result =
                  unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peekByteOff (castPtr ptr) offset
                newRemainder =
                  A.PS payloadFP (offset + size) (length - size)
-               in return (result, newRemainder)
-      else throwE "End of input" 
+               in Right (result, newRemainder)
+      else Left "End of input" 
 
 -- | Big-endian word of 2 bytes.
 {-# INLINE beWord16 #-}
