@@ -45,7 +45,7 @@ library
   build-depends:
     -- data:
     bytestring >= 0.10 && < 0.12,
-    text >= 1 && < 2,
+    text >= 1 && < 3,
     -- general:
     mtl == 2.*,
     transformers >= 0.4 && < 0.7,
