@@ -1,7 +1,7 @@
 name:          binary-parser
 version:       0.5.7.3
 synopsis:
-  A highly-efficient but limited parser API specialised for bytestrings
+  An efficient but limited parser API specialised to bytestrings
 
 category:      Parser, Binary
 homepage:      https://github.com/nikita-volkov/binary-parser
