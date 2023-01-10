@@ -3,6 +3,9 @@ all: format test
 test:
 	cabal test -j +RTS -A128m -n2m -N -RTS -fwarn-incomplete-patterns --builddir dist/test
 
+test-mtl-2-3:
+	cabal test -j +RTS -A128m -n2m -N -RTS -fwarn-incomplete-patterns --builddir dist/test-mtl-2-3 --constraint "mtl ^>=2.3"
+
 docs:
 	cabal haddock --enable-documentation
 

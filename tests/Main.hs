@@ -1,5 +1,6 @@
 module Main where
 
+import BasePrelude
 import qualified BinaryParser as B
 import qualified Data.ByteString as A
 import qualified Data.ByteString.Builder as C
@@ -8,7 +9,6 @@ import Test.QuickCheck.Instances
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import Prelude
 
 main =
   defaultMain $
