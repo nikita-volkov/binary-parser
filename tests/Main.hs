@@ -1,42 +1,35 @@
 module Main where
 
-import Prelude
+import qualified BinaryParser as B
+import qualified Data.ByteString as A
+import qualified Data.ByteString.Builder as C
+import qualified Data.ByteString.Lazy as D
 import Test.QuickCheck.Instances
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import qualified Data.ByteString as A
-import qualified Data.ByteString.Builder as C
-import qualified Data.ByteString.Lazy as D
-import qualified BinaryParser as B
-
+import Prelude
 
 main =
   defaultMain $
-  testGroup "All tests" $
-  [
-    builderIsomporhismProperty "byte" B.byte C.word8
-    ,
-    builderIsomporhismProperty "beWord16" B.beWord16 C.word16BE
-    ,
-    builderIsomporhismProperty "beWord32" B.beWord32 C.word32BE
-    ,
-    expectedResultTest "byte consumes" ((,) <$> B.byte <*> B.beWord32) (49, 4) "1\NUL\NUL\NUL\EOT"
-    ,
-    expectedResultTest "Applicative composition" ((,) <$> B.beWord16 <*> B.beWord16) (1, 2) "\NUL\SOH\NUL\STX"
-    ,
-    let parser =
-          do
-            a <- B.beWord16
-            b <- B.beWord16
-            return (a, b)
-        in expectedResultTest "Monadic composition" parser (1, 2) "\NUL\SOH\NUL\STX"
-  ]
+    testGroup "All tests" $
+      [ builderIsomporhismProperty "byte" B.byte C.word8,
+        builderIsomporhismProperty "beWord16" B.beWord16 C.word16BE,
+        builderIsomporhismProperty "beWord32" B.beWord32 C.word32BE,
+        expectedResultTest "byte consumes" ((,) <$> B.byte <*> B.beWord32) (49, 4) "1\NUL\NUL\NUL\EOT",
+        expectedResultTest "Applicative composition" ((,) <$> B.beWord16 <*> B.beWord16) (1, 2) "\NUL\SOH\NUL\STX",
+        let parser =
+              do
+                a <- B.beWord16
+                b <- B.beWord16
+                return (a, b)
+         in expectedResultTest "Monadic composition" parser (1, 2) "\NUL\SOH\NUL\STX"
+      ]
 
 builderIsomporhismProperty details parser valueToBuilder =
   testProperty name $ \value ->
-  B.run parser (D.toStrict (C.toLazyByteString (valueToBuilder value))) ===
-  Right value
+    B.run parser (D.toStrict (C.toLazyByteString (valueToBuilder value)))
+      === Right value
   where
     name =
       "builderIsomporhismProperty: " <> details

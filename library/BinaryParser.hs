@@ -1,51 +1,52 @@
 {-# LANGUAGE CPP #-}
+
 module BinaryParser
-(
-  BinaryParser,
-  run,
-  failure,
-  byte,
-  matchingByte,
-  bytesOfSize,
-  bytesWhile,
-  unitOfSize,
-  unitOfBytes,
-  unitWhile,
-  remainders,
-  fold,
-  endOfInput,
-  sized,
-  -- * Extras
-  storableOfSize,
-  beWord16,
-  leWord16,
-  beWord32,
-  leWord32,
-  beWord64,
-  leWord64,
-  asciiIntegral,
-)
+  ( BinaryParser,
+    run,
+    failure,
+    byte,
+    matchingByte,
+    bytesOfSize,
+    bytesWhile,
+    unitOfSize,
+    unitOfBytes,
+    unitWhile,
+    remainders,
+    fold,
+    endOfInput,
+    sized,
+
+    -- * Extras
+    storableOfSize,
+    beWord16,
+    leWord16,
+    beWord32,
+    leWord32,
+    beWord64,
+    leWord64,
+    asciiIntegral,
+  )
 where
 
 import BinaryParser.Prelude hiding (fold)
-import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Unsafe as ByteString
-import qualified Data.ByteString.Internal as A
 import qualified BinaryParser.Prelude as B
-
+import qualified Data.ByteString as ByteString
+import qualified Data.ByteString.Internal as A
+import qualified Data.ByteString.Unsafe as ByteString
 
 -- |
 -- A highly-efficient parser specialised for strict 'ByteString's.
--- 
+--
 -- Supports the roll-back and alternative branching
 -- on the basis of the 'Alternative' interface.
--- 
+--
 -- Does not generate fancy error-messages,
 -- which contributes to its efficiency.
-newtype BinaryParser a =
-  BinaryParser ( ByteString -> Either Text ( a , ByteString ) )
-  deriving ( Functor , Applicative , Alternative , Monad , MonadPlus , MonadError Text )
-    via ( StateT ByteString ( Except Text ) )
+newtype BinaryParser a
+  = BinaryParser (ByteString -> Either Text (a, ByteString))
+  deriving
+    (Functor, Applicative, Alternative, Monad, MonadPlus, MonadError Text)
+    via (StateT ByteString (Except Text))
 
 type role BinaryParser representational
 
@@ -189,8 +190,8 @@ sized size (BinaryParser parser) =
   BinaryParser $ \remainders ->
     if ByteString.length remainders >= size
       then
-        parser (ByteString.unsafeTake size remainders) &
-        fmap (\result -> (fst result, ByteString.unsafeDrop size remainders))
+        parser (ByteString.unsafeTake size remainders)
+          & fmap (\result -> (fst result, ByteString.unsafeDrop size remainders))
       else Left "End of input"
 
 -- |
@@ -200,12 +201,13 @@ storableOfSize :: Storable a => Int -> BinaryParser a
 storableOfSize size =
   BinaryParser $ \(A.PS payloadFP offset length) ->
     if length >= size
-      then let result =
-                 unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peekByteOff (castPtr ptr) offset
-               newRemainder =
-                 A.PS payloadFP (offset + size) (length - size)
-               in Right (result, newRemainder)
-      else Left "End of input" 
+      then
+        let result =
+              unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peekByteOff (castPtr ptr) offset
+            newRemainder =
+              A.PS payloadFP (offset + size) (length - size)
+         in Right (result, newRemainder)
+      else Left "End of input"
 
 -- | Big-endian word of 2 bytes.
 {-# INLINE beWord16 #-}
@@ -277,7 +279,7 @@ leWord64 =
 -- Integral number encoded in ASCII.
 {-# INLINE asciiIntegral #-}
 asciiIntegral :: Integral a => BinaryParser a
-asciiIntegral = 
+asciiIntegral =
   do
     firstDigit <- matchingByte byteDigit
     fold step firstDigit
