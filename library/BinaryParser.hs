@@ -29,9 +29,8 @@ module BinaryParser
 where
 
 import BinaryParser.Prelude hiding (fold)
-import qualified BinaryParser.Prelude as B
 import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Internal as A
+import qualified Data.ByteString.Internal as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
 
 -- |
@@ -76,19 +75,6 @@ byte =
     if ByteString.null remainders
       then Left "End of input"
       else Right (ByteString.unsafeHead remainders, ByteString.unsafeDrop 1 remainders)
-
--- |
--- Consume a single byte, which satisfies the predicate.
-{-# INLINE satisfyingByte #-}
-satisfyingByte :: (Word8 -> Bool) -> BinaryParser Word8
-satisfyingByte predicate =
-  BinaryParser $ \remainders ->
-    case ByteString.uncons remainders of
-      Nothing -> Left "End of input"
-      Just (head, tail) ->
-        if predicate head
-          then Right (head, tail)
-          else Left "Byte doesn't satisfy a predicate"
 
 -- |
 -- Consume a single byte, which satisfies the predicate.
@@ -197,15 +183,15 @@ sized size (BinaryParser parser) =
 -- |
 -- Storable value of the given amount of bytes.
 {-# INLINE storableOfSize #-}
-storableOfSize :: Storable a => Int -> BinaryParser a
+storableOfSize :: (Storable a) => Int -> BinaryParser a
 storableOfSize size =
-  BinaryParser $ \(A.PS payloadFP offset length) ->
+  BinaryParser $ \(ByteString.PS payloadFP offset length) ->
     if length >= size
       then
         let result =
               unsafeDupablePerformIO $ withForeignPtr payloadFP $ \ptr -> peekByteOff (castPtr ptr) offset
             newRemainder =
-              A.PS payloadFP (offset + size) (length - size)
+              ByteString.PS payloadFP (offset + size) (length - size)
          in Right (result, newRemainder)
       else Left "End of input"
 
@@ -278,7 +264,7 @@ leWord64 =
 -- |
 -- Integral number encoded in ASCII.
 {-# INLINE asciiIntegral #-}
-asciiIntegral :: Integral a => BinaryParser a
+asciiIntegral :: (Integral a) => BinaryParser a
 asciiIntegral =
   do
     firstDigit <- matchingByte byteDigit
