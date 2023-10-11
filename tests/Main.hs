@@ -5,11 +5,11 @@ import qualified BinaryParser as B
 import qualified Data.ByteString as A
 import qualified Data.ByteString.Builder as C
 import qualified Data.ByteString.Lazy as D
-import Test.QuickCheck.Instances
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
+main :: IO ()
 main =
   defaultMain $
     testGroup "All tests" $
@@ -26,6 +26,7 @@ main =
          in expectedResultTest "Monadic composition" parser (1, 2) "\NUL\SOH\NUL\STX"
       ]
 
+builderIsomporhismProperty :: (Arbitrary a, Show a, Eq a) => TestName -> B.BinaryParser a -> (a -> C.Builder) -> TestTree
 builderIsomporhismProperty details parser valueToBuilder =
   testProperty name $ \value ->
     B.run parser (D.toStrict (C.toLazyByteString (valueToBuilder value)))
@@ -34,6 +35,7 @@ builderIsomporhismProperty details parser valueToBuilder =
     name =
       "builderIsomporhismProperty: " <> details
 
+expectedResultTest :: (Eq b, Show b) => TestName -> B.BinaryParser b -> b -> A.ByteString -> TestTree
 expectedResultTest details parser expectedValue input =
   testCase name $ do
     assertEqual "" (Right expectedValue) (B.run parser input)
