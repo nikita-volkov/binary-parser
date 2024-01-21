@@ -79,7 +79,7 @@ test-suite tests
   build-depends:
     , base-prelude >=1.6 && <2
     , binary-parser
-    , bytestring >=0.10 && <0.12
+    , bytestring >=0.10 && <0.13
     , tasty >=1.2.3 && <2
     , tasty-hunit ^>=0.10
     , tasty-quickcheck ^>=0.10
