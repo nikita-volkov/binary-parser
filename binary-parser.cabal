@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          binary-parser
-version:       0.5.7.6
+version:       0.5.7.7
 synopsis:
   An efficient but limited parser API specialised to bytestrings
 
