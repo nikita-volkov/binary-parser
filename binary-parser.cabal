@@ -82,4 +82,4 @@ test-suite tests
     , bytestring >=0.10 && <0.13
     , tasty >=1.2.3 && <2
     , tasty-hunit ^>=0.10
-    , tasty-quickcheck ^>=0.10
+    , tasty-quickcheck >=0.10 && <0.12
