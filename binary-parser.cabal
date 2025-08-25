@@ -15,7 +15,7 @@ license-file:  LICENSE
 
 source-repository head
   type:     git
-  location: git://github.com/nikita-volkov/binary-parser.git
+  location: https://github.com/nikita-volkov/binary-parser
 
 common base
   default-language:   Haskell2010
