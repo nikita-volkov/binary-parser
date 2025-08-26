@@ -27,7 +27,7 @@ module BinaryParser
     asciiIntegral,
 
     -- * Integrations
-    fromPtrPeekerDynamic,
+    fromPtrPeekerVariable,
   )
 where
 
@@ -290,8 +290,8 @@ asciiIntegral =
 -- |
 -- Integration point with the more efficient \"ptr-peeker\" library,
 -- allowing to adapt the users of this library without much fuss.
-fromPtrPeekerDynamic :: PtrPeeker.Variable a -> BinaryParser a
-fromPtrPeekerDynamic peeker =
+fromPtrPeekerVariable :: PtrPeeker.Variable a -> BinaryParser a
+fromPtrPeekerVariable peeker =
   BinaryParser $ \remainders ->
     case PtrPeeker.runVariableOnByteStringWithRemainders peeker remainders of
       Right (result, newRemainders) -> Right (result, newRemainders)
