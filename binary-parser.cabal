@@ -1,27 +1,25 @@
 cabal-version: 3.0
-name:          binary-parser
-version:       0.5.7.7
+name: binary-parser
+version: 0.5.7.7
 synopsis:
   An efficient but limited parser API specialised to bytestrings
 
-category:      Parser, Binary
-homepage:      https://github.com/nikita-volkov/binary-parser
-bug-reports:   https://github.com/nikita-volkov/binary-parser/issues
-author:        Nikita Volkov <nikita.y.volkov@mail.ru>
-maintainer:    Nikita Volkov <nikita.y.volkov@mail.ru>
-copyright:     (c) 2015, Nikita Volkov
-license:       MIT
-license-file:  LICENSE
+category: Parser, Binary
+homepage: https://github.com/nikita-volkov/binary-parser
+bug-reports: https://github.com/nikita-volkov/binary-parser/issues
+author: Nikita Volkov <nikita.y.volkov@mail.ru>
+maintainer: Nikita Volkov <nikita.y.volkov@mail.ru>
+copyright: (c) 2015, Nikita Volkov
+license: MIT
+license-file: LICENSE
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/nikita-volkov/binary-parser
 
 common base
-  default-language:   Haskell2010
+  default-language: Haskell2010
   default-extensions:
-    NoImplicitPrelude
-    NoMonomorphismRestriction
     Arrows
     BangPatterns
     ConstraintKinds
@@ -44,6 +42,8 @@ common base
     MagicHash
     MultiParamTypeClasses
     MultiWayIf
+    NoImplicitPrelude
+    NoMonomorphismRestriction
     OverloadedStrings
     ParallelListComp
     PatternGuards
@@ -60,27 +60,27 @@ common base
     UnboxedTuples
 
 library
-  import:          base
-  hs-source-dirs:  library
-  other-modules:   BinaryParser.Prelude
+  import: base
+  hs-source-dirs: library
+  other-modules: BinaryParser.Prelude
   exposed-modules: BinaryParser
   build-depends:
-    , base >=4.12 && <5
-    , bytestring >=0.10 && <0.13
-    , mtl >=2 && <3
-    , text >=1 && <3
-    , transformers >=0.4 && <0.8
-    , ptr-peeker >=0.1 && <0.2
+    base >=4.12 && <5,
+    bytestring >=0.10 && <0.13,
+    mtl >=2 && <3,
+    ptr-peeker >=0 && <0.2,
+    text >=1 && <3,
+    transformers >=0.4 && <0.8,
 
 test-suite tests
-  import:         base
-  type:           exitcode-stdio-1.0
+  import: base
+  type: exitcode-stdio-1.0
   hs-source-dirs: tests
-  main-is:        Main.hs
+  main-is: Main.hs
   build-depends:
-    , base-prelude >=1.6 && <2
-    , binary-parser
-    , bytestring >=0.10 && <0.13
-    , tasty >=1.2.3 && <2
-    , tasty-hunit ^>=0.10
-    , tasty-quickcheck >=0.10 && <0.12
+    base-prelude >=1.6 && <2,
+    binary-parser,
+    bytestring >=0.10 && <0.13,
+    tasty >=1.2.3 && <2,
+    tasty-hunit ^>=0.10,
+    tasty-quickcheck >=0.10 && <0.12,

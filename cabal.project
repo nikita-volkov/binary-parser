@@ -3,4 +3,4 @@ packages: .
 source-repository-package
   type: git
   location: https://github.com/nikita-volkov/ptr-peeker
-  tag: 975283ba502033bd9566f5a17ea3d26b1c4c13b1
+  tag: dc3697755fc3be407a21431834df8a14ed7d1f86

@@ -268,7 +268,7 @@ leWord64 =
 -- |
 -- Integral number encoded in ASCII.
 {-# INLINE asciiIntegral #-}
-asciiIntegral :: (Integral a) => BinaryParser a
+asciiIntegral :: forall a. (Integral a) => BinaryParser a
 asciiIntegral =
   do
     firstDigit <- matchingByte byteDigit
@@ -278,7 +278,7 @@ asciiIntegral =
       case byte - 48 of
         subtracted ->
           if subtracted <= 9
-            then Right (fromIntegral subtracted)
+            then Right (fromIntegral subtracted :: a)
             else Left "Not an ASCII decimal byte"
     step state byte =
       case byteDigit byte of
@@ -290,9 +290,9 @@ asciiIntegral =
 -- |
 -- Integration point with the more efficient \"ptr-peeker\" library,
 -- allowing to adapt the users of this library without much fuss.
-fromPtrPeekerDynamic :: PtrPeeker.Dynamic a -> BinaryParser a
+fromPtrPeekerDynamic :: PtrPeeker.Variable a -> BinaryParser a
 fromPtrPeekerDynamic peeker =
   BinaryParser $ \remainders ->
-    case PtrPeeker.decodeByteStringDynamicallyWithRemainders peeker remainders of
+    case PtrPeeker.runVariableOnByteStringWithRemainders peeker remainders of
       Right (result, newRemainders) -> Right (result, newRemainders)
       Left bytesNeeded -> Left ("Need at least " <> fromString (show bytesNeeded) <> " more bytes")
