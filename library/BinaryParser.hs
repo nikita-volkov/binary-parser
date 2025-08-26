@@ -25,6 +25,9 @@ module BinaryParser
     beWord64,
     leWord64,
     asciiIntegral,
+
+    -- * Integrations
+    fromPtrPeekerDynamic,
   )
 where
 
@@ -32,6 +35,7 @@ import BinaryParser.Prelude hiding (fold)
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Internal as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
+import qualified PtrPeeker
 
 -- |
 -- A highly-efficient parser specialised for strict 'ByteString's.
@@ -264,7 +268,7 @@ leWord64 =
 -- |
 -- Integral number encoded in ASCII.
 {-# INLINE asciiIntegral #-}
-asciiIntegral :: (Integral a) => BinaryParser a
+asciiIntegral :: forall a. (Integral a) => BinaryParser a
 asciiIntegral =
   do
     firstDigit <- matchingByte byteDigit
@@ -274,9 +278,21 @@ asciiIntegral =
       case byte - 48 of
         subtracted ->
           if subtracted <= 9
-            then Right (fromIntegral subtracted)
+            then Right (fromIntegral subtracted :: a)
             else Left "Not an ASCII decimal byte"
     step state byte =
       case byteDigit byte of
         Right digit -> Just (state * 10 + digit)
         _ -> Nothing
+
+-- * Integrations
+
+-- |
+-- Integration point with the more efficient \"ptr-peeker\" library,
+-- allowing to adapt the users of this library without much fuss.
+fromPtrPeekerDynamic :: PtrPeeker.Variable a -> BinaryParser a
+fromPtrPeekerDynamic peeker =
+  BinaryParser $ \remainders ->
+    case PtrPeeker.runVariableOnByteStringWithRemainders peeker remainders of
+      Right (result, newRemainders) -> Right (result, newRemainders)
+      Left bytesNeeded -> Left ("Need at least " <> fromString (show bytesNeeded) <> " more bytes")
